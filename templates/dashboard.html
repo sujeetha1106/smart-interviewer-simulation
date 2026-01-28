@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIS AI Interview Coach</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: Arial, sans-serif; background:#00143a; color:white; min-height:100vh; text-align:center; overflow:hidden; }
+header { text-align:center; margin-bottom:40px; }
+header h1 { font-size:50px; color:#6ec4ff; text-shadow:0 0 10px #6ec4ff,0 0 20px #003d66; }
+header p { font-size:20px; color:#cfe9ff; margin-bottom:10px; }
+button.logout { padding:8px 18px; border:none; border-radius:8px; background:#ff4d4d; color:white; cursor:pointer; margin-top:5px; box-shadow:0 5px 15px rgba(255,0,0,0.5); }
+button.logout:hover { background:#ff1a1a; }
+
+.grid-container {
+    display:grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr);
+    gap:30px; width:90%; max-width:900px; margin:0 auto;
+}
+.grid-box {
+    background:#001e4d; color:white; padding:40px 20px; border-radius:20px;
+    box-shadow:0 10px 20px rgba(110,196,255,0.6); cursor:pointer; transition: all 0.3s ease;
+    display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:150px; text-align:center;
+}
+.grid-box:hover { transform: translateY(-8px); box-shadow:0 15px 30px rgba(110,196,255,0.8);}
+.grid-box h2 { font-size:24px; margin-bottom:10px; }
+.grid-box p { font-size:16px; line-height:1.4; }
+
+.page { display:none; padding:20px; }
+textarea { padding:10px; margin:10px 0; width:80%; height:80px; border-radius:10px; border:none; }
+button { padding:10px 20px; border:none; border-radius:10px; background:#39b6ff; color:white; cursor:pointer; margin:10px; box-shadow:0 5px 15px rgba(110,196,255,0.6);}
+button:hover { background:#6ec4ff; box-shadow:0 5px 20px rgba(110,196,255,0.8);}
+.score-box { background:#013b8b; color:#6ec4ff; padding:20px; margin:15px; border-radius:15px; text-align:left; box-shadow:0 5px 15px rgba(110,196,255,0.6);}
+.score-box b { color:#fff; }
+#scoreContent { max-height:400px; overflow-y:auto; padding-right:10px; }
+
+.profile-box { background:#001e4d; color:white; padding:30px; border-radius:20px; max-width:400px; margin:20px auto; box-shadow:0 10px 25px rgba(110,196,255,0.6);}
+.profile-box h2 { font-size:24px; margin-bottom:15px; }
+.profile-box p { font-size:16px; margin:8px 0; }
+.profile-box button { width:80%; }
+
+.settings-box { background:#001e4d; color:white; padding:30px; border-radius:20px; max-width:500px; margin:20px auto; box-shadow:0 10px 25px rgba(110,196,255,0.6);}
+.settings-box h2 { font-size:24px; margin-bottom:15px; }
+.settings-box label { display:block; margin:10px 0 5px; text-align:left; }
+.settings-box input { width:95%; padding:8px; border-radius:8px; border:none; margin-bottom:10px; }
+
+@media(max-width:600px){ .grid-container { grid-template-columns:1fr; grid-template-rows:auto; } header h1 { font-size:40px; } }
+canvas.particles-bg { position:fixed; top:0; left:0; z-index:-1; width:100%; height:100%; }
+</style>
+</head>
+<body>
+
+<!-- Dashboard -->
+<div id="dashboard">
+    <header>
+        <h1>Welcome <span id="userName"></span></h1>
+        <p>Your AI interview coach starts here!</p>
+        <button class="logout" onclick="logout()">Logout</button>
+    </header>
+    <div class="grid-container">
+        <div class="grid-box" onclick="startRandom()">
+            <h2>Random Questions</h2>
+            <p>Answer AI-generated questions and get feedback.</p>
+        </div>
+        <div class="grid-box" onclick="startResume()">
+            <h2>Upload Resume</h2>
+            <p>Upload resume for personalized questions.</p>
+        </div>
+        <div class="grid-box" onclick="viewProfile()"> 
+            <h2>View Profile</h2>
+            <p>Check your profile & settings.</p>
+        </div>
+        <div class="grid-box" onclick="viewScore()">
+            <h2>View Score</h2>
+            <p>View previous interview results.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Random Questions -->
+<div id="randomPage" class="page">
+    <h1>AI Interview Questions</h1>
+    <div id="questionBox"></div>
+    <textarea id="answerInput" placeholder="Type your answer here"></textarea><br>
+    <button onclick="submitAnswer()">Submit Answer</button>
+    <div id="feedbackBox" style="margin-top:20px;"></div>
+    <button id="nextBtn" onclick="nextQuestion()" style="display:none;margin-top:15px;">Next Question</button>
+    <button onclick="exitFlow()">Exit</button>
+</div>
+
+<!-- Resume Upload -->
+<div id="resumePage" class="page">
+    <h1>Upload Resume</h1>
+    <input type="file" id="resumeFile" accept=".txt"><br>
+    <button onclick="uploadResume()">Upload & Generate Questions</button>
+    <button onclick="exitFlow()">Exit</button>
+</div>
+
+<!-- Score Page - New Dedicated View Score Page -->
+<div id="scorePage" class="page">
+    <h1>Interview Results</h1>
+    <div style="background:#001e4d;padding:30px;border-radius:20px;max-width:600px;margin:20px auto;box-shadow:0 10px 25px rgba(110,196,255,0.6);">
+        <p style="font-size:18px;margin:10px 0;"><b>Date:</b> <span id="scoreDate"></span></p>
+        <p style="font-size:18px;margin:10px 0;"><b>Total Score:</b> <span id="totalScore" style="color:#39b6ff;font-size:24px;"></span></p>
+    </div>
+    <div id="scoreContent" style="margin:20px auto;max-width:700px;"></div>
+    <div style="text-align:center;margin-top:40px;padding:25px;background:linear-gradient(135deg, #001e4d 0%, #003d66 100%);border-radius:15px;max-width:650px;margin-left:auto;margin-right:auto;border:2px solid #6ec4ff;box-shadow:0 10px 30px rgba(110,196,255,0.5);">
+        <p style="color:#cfe9ff;margin-bottom:15px;font-size:14px;">Choose your next action:</p>
+        <button onclick="exitFlow()" style="margin:8px;padding:14px 35px;font-size:17px;font-weight:bold;background:#ff6b6b;border:none;border-radius:8px;color:white;cursor:pointer;box-shadow:0 5px 15px rgba(255,107,107,0.5);transition:all 0.3s ease;">← Back to Dashboard</button>
+        <br>
+        <button onclick="startRandom()" style="margin:8px;padding:14px 35px;font-size:17px;font-weight:bold;background:#6ec4ff;border:none;border-radius:8px;color:white;cursor:pointer;box-shadow:0 5px 15px rgba(110,196,255,0.6);transition:all 0.3s ease;">Start New Interview →</button>
+    </div>
+</div>
+
+<!-- Profile Page -->
+<div id="profilePage" class="page">
+    <h1>Profile</h1>
+    <div class="profile-box">
+        <div style="font-size:50px; text-align:center;">👤</div>
+        <p><b>Name:</b> <span id="profileUser"></span></p>
+        <p><b>Email:</b> <span id="profileEmail"></span></p>
+        <button onclick="showTerms()">Terms & Conditions</button>
+    </div>
+    <button onclick="exitFlow()">Back</button>
+</div>
+
+<!-- Terms Page -->
+<div id="termsPage" class="page">
+    <h1>Terms & Conditions</h1>
+    <div class="terms-container" style="background:#001e4d;padding:30px;border-radius:20px;max-width:700px;margin:20px auto;box-shadow:0 10px 25px rgba(110,196,255,0.6);max-height:70vh;overflow-y:auto;text-align:left;">
+        <p><b>TERMS AND CONDITIONS FOR SMART INTERVIEW SIMULATION</b></p>
+        <p><b>Effective Date:</b> [Insert Date]</p>
+        <p><b>1. Introduction</b><br>The Smart Interview Simulation ("Simulation") is a practice platform designed to help users prepare for job interviews. These Terms and Conditions ("Terms") govern your use of the Simulation. By accessing and using the Simulation, you acknowledge that you've read, understood, and agree to be bound by these Terms.</p>
+        <p><b>2. Definitions</b><br>"We" or "Us" refers to [Your Company Name], the provider of the Simulation.<br>"You" or "User" refers to the individual using the Simulation.<br>"Simulation" means the Smart Interview Simulation platform, including all content and features.</p>
+        <p><b>3. Use of the Simulation</b><br>3.1 The Simulation is for personal, non-commercial use only. You're granted a limited, non-exclusive, and non-transferable license to use the Simulation for practice purposes.<br>3.2 You're responsible for maintaining confidentiality of your login credentials and account information.</p>
+        <p><b>4. Purpose</b><br>The Simulation provides practice interviews and feedback to help users improve their interview skills. It's not a substitute for real interviews, professional advice, or a guarantee of job placement.</p>
+        <p><b>5. Data Collection</b><br>5.1 We record conversations, including audio and video, to improve the AI's accuracy and provide feedback.<br>5.2 Your data is stored securely and not shared with third parties without consent, except as necessary for improving the platform or complying with law.</p>
+        <p><b>6. Confidentiality</b><br>6.1 Maintain confidentiality of your login credentials. You're responsible for any activity under your account.<br>6.2 Don't share your account or login details with others.</p>
+        <p><b>7. Feedback</b><br>The AI provides feedback for guidance only. We don't guarantee accuracy, completeness, or reliability of the feedback.</p>
+        <p><b>8. Liability</b><br>8.1 We aren't liable for any damages, direct or indirect, arising from your use of the Simulation.<br>8.2 You're responsible for your own actions and decisions.</p>
+        <p><b>9. Intellectual Property</b><br>9.1 The Simulation's content is our property. You don't acquire any rights.<br>9.2 Don't copy, modify, or distribute any part of the Simulation without permission.</p>
+        <p><b>10. Termination</b><br>We may terminate or suspend access to the Simulation at any time, with or without notice.</p>
+        <p><b>11. Changes to Terms</b><br>We may update these Terms. Continued use implies acceptance of updated Terms.</p>
+        <p><b>12. Governing Law</b><br>These Terms are governed by and construed in accordance with [Insert Jurisdiction] laws.</p>
+        <p><b>13. Dispute Resolution</b><br>Disputes arising from these Terms will be resolved through [Insert Dispute Resolution Mechanism, e.g., arbitration].</p>
+        <p><b>14. Contact Information</b><br>For questions or concerns, contact us at [Insert Contact Email or Address].</p>
+        <p>By using the Smart Interview Simulation, you acknowledge you've read, understood, and agree to these Terms.</p>
+    </div>
+    <button onclick="exitFlow()">Back</button>
+</div>
+
+<canvas class="particles-bg" id="particles"></canvas>
+
+<script>
+// Global variables
+let currentQ = 0, userAnswers = [], userScores = [], userTips = [], aiQuestions = [];
+let interviewDate = new Date().toLocaleDateString();
+let currentInterviewType = "random"; // Track if it's random or resume-based
+let questionPool = [
+  "Tell me about yourself.",
+  "Why do you want this job?",
+  "What do you know about our company?",
+  "What are your short-term and long-term goals?",
+  "Why should we hire you?",
+  "What motivates you to work hard?",
+  "How do you handle pressure or stress?",
+  "Describe your biggest achievement.",
+  "What are your strengths?",
+  "What is your biggest weakness?",
+  "Describe a challenge you faced and how you handled it.",
+  "Tell me about a time you worked in a team.",
+  "How do you handle conflicts with teammates?",
+  "Have you ever failed at something? What did you learn?",
+  "Describe a situation where you took initiative.",
+  "How do you manage your time when multiple tasks are assigned?",
+  "Tell me about a time you received negative feedback.",
+  "How do you handle criticism?",
+  "Describe a situation where you solved a problem creatively.",
+  "Tell me about a time you had to learn something new quickly.",
+  "Explain a project you have worked on.",
+  "What tools or technologies are you comfortable with?",
+  "How do you keep yourself updated with new skills?",
+  "Describe your role in your last project or internship.",
+  "What challenges did you face in your project?",
+  "Where do you see yourself in 5 years?",
+  "Are you comfortable working in a team or independently?",
+  "How do you handle mistakes at work?",
+  "What are your expectations from this role?",
+  "Do you have any questions for us?"
+];
+let resumeKeywords = ["team","project","experience","solved","developed","problem","worked","handled","learned","leadership","communication"];
+let scoringKeywords = ["motivation","responsibility","quick learner","adaptability","self improvement","skill match","career growth","learning opportunity","contribution","innovation","quality","work culture","customer focus","company growth","short term goals","long term goals","skill development","career planning","experience","dedication","commitment","learning mindset","achievement","planning","time management","problem solving","focus","communication","teamwork","positive attitude","self awareness","growth mindset","deadline","execution","solution","collaboration","coordination","listening","understanding","confidence","leadership","decision making","flexibility","consistency","efficiency","professionalism","integrity","initiative","analytical thinking","stress management","ownership","accountability","result oriented","performance","continuous learning","technical skills","soft skills","domain knowledge","process improvement","best practices","attention to detail","quality assurance","risk management","prioritization","task management","goal oriented","strategic thinking","critical thinking","decision ownership","time efficiency","productivity","work ethics","reliability","dependability","proactive","self motivated","discipline","resilience","pressure handling","conflict resolution","negotiation","adaptation","open minded","feedback acceptance","improvement mindset","learning curve","self confidence","clarity","articulation","presentation skills","stakeholder management","client handling","business understanding","value addition","impact","measurable results","ownership mindset","collaborative approach","team contribution","cross functional","alignment","execution excellence","problem analysis","root cause","solution driven","data driven","logical thinking","structured approach","planning ability","organizational skills","resource management","cost awareness","process optimization","continuous improvement","innovation mindset","initiative taking","lead by example","ethical behavior","professional conduct","reliability under pressure"];
+
+// Logged user
+let userName = sessionStorage.getItem("userName") || localStorage.getItem("userName") || "User";
+if(!sessionStorage.getItem("userName")) {
+    sessionStorage.setItem("userName", userName);
+    localStorage.setItem("userName", userName);
+}
+document.getElementById("userName").innerText = userName;
+const loggedEmail = userName.toLowerCase() + "@mail.com";
+const loggedUser = userName;
+
+// Show/hide pages
+function showPage(id){
+    ["dashboard","randomPage","resumePage","scorePage","profilePage","termsPage"].forEach(p=>document.getElementById(p).style.display="none");
+    document.getElementById(id).style.display="block";
+    // Toggle fixed score back button visibility
+    const _scoreBack = document.getElementById("scoreBackBtn");
+    if(_scoreBack){ _scoreBack.style.display = (id === "scorePage") ? "block" : "none"; }
+}
+
+// Dashboard buttons
+function startRandom(){
+    currentQ=0; userAnswers=[]; userScores=[]; userTips=[]; aiQuestions=[];
+    currentInterviewType = "random";
+    interviewDate = new Date().toLocaleDateString();
+    let allQuestions = [
+      "Tell me about yourself.",
+      "Why do you want this job?",
+      "What do you know about our company?",
+      "What are your short-term and long-term goals?",
+      "Why should we hire you?",
+      "What motivates you to work hard?",
+      "How do you handle pressure or stress?",
+      "Describe your biggest achievement.",
+      "What are your strengths?",
+      "What is your biggest weakness?",
+      "Describe a challenge you faced and how you handled it.",
+      "Tell me about a time you worked in a team.",
+      "How do you handle conflicts with teammates?",
+      "Have you ever failed at something? What did you learn?",
+      "Describe a situation where you took initiative.",
+      "How do you manage your time when multiple tasks are assigned?",
+      "Tell me about a time you received negative feedback.",
+      "How do you handle criticism?",
+      "Describe a situation where you solved a problem creatively.",
+      "Tell me about a time you had to learn something new quickly.",
+      "Explain a project you have worked on.",
+      "What tools or technologies are you comfortable with?",
+      "How do you keep yourself updated with new skills?",
+      "Describe your role in your last project or internship.",
+      "What challenges did you face in your project?",
+      "Where do you see yourself in 5 years?",
+      "Are you comfortable working in a team or independently?",
+      "How do you handle mistakes at work?",
+      "What are your expectations from this role?",
+      "Do you have any questions for us?"
+    ];
+    questionPool = allQuestions.sort(()=>Math.random()-0.5).slice(0, 5);
+    showPage("randomPage"); showQuestion();
+}
+function startResume(){ showPage("resumePage"); }
+function viewProfile(){
+    document.getElementById("profileUser").innerText = loggedUser;
+    document.getElementById("profileEmail").innerText = loggedEmail;
+    showPage("profilePage");
+}
+function viewSettings(){ showPage("settingsPage"); }
+function viewScore(){ 
+    displayScore(); 
+    showPage("scorePage"); 
+}
+function exitFlow(){ showPage("dashboard"); }
+function backToDashboard(){ showPage("dashboard"); }
+function nextQuestion(){
+    currentQ++;
+    if(currentQ<questionPool.length) {
+        document.getElementById("answerInput").value="";
+        document.getElementById("answerInput").disabled = false;
+        document.getElementById("feedbackBox").innerHTML="";
+        document.getElementById("nextBtn").style.display="none";
+        showQuestion();
+    } else {
+        // Show final score page
+        displayScore(); 
+        showPage("scorePage"); 
+    }
+}
+function logout(){ sessionStorage.clear(); window.location.href="/logout"; }
+
+// Questions & Feedback
+function showQuestion(){
+    const q = questionPool[currentQ];
+    aiQuestions.push(q);
+    document.getElementById("questionBox").innerHTML = `<b>Q${currentQ+1}:</b> ${q}`;
+    document.getElementById("answerInput").focus();
+}
+
+function generateFeedback(ans){
+    ans = ans.toLowerCase(); const fb=[];
+    resumeKeywords.forEach(k=>{ if(ans.includes(k)) fb.push(`Mentions ${k}.`); });
+    if(fb.length===0) fb.push("Try including relevant keywords like teamwork, project, leadership.");
+    return fb.join(" ");
+}
+
+function submitAnswer(){
+    const ans = document.getElementById("answerInput").value.trim();
+    if(ans===""){ alert("Type an answer!"); return; }
+    
+    let score=0, fb="";
+    
+    // Check for random/meaningless content
+    const isRandomNumbers = /^\d[\d\s]*$/.test(ans); // Only numbers and spaces
+    const isRandomAlphabets = /^[a-z\s]+$/.test(ans) && ans.split(/\s+/).filter(w=>w.length>3).length === 0;
+    const isRandomSymbols = /^[^a-zA-Z0-9\s]+$/.test(ans); // Only symbols
+    const hasNoMeaningfulContent = ans.split(/\s+/).length < 2 || ans.length < 10;
+    
+    if(isRandomNumbers || isRandomAlphabets || isRandomSymbols || hasNoMeaningfulContent){
+        score = 1;
+        fb = "Meaningless answer. Please enter a meaningful answer.";
+    } else {
+        // Score based on fluency, grammar, and relevance
+        score = 3; // Base score
+        
+        // Fluency check - sentence structure and flow
+        let sentences = ans.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        let hasGoodFlow = sentences.length >= 2 || (sentences.length === 1 && ans.length > 40);
+        
+        if(hasGoodFlow){
+            score += 2;
+        }
+        
+        // Grammar check - common errors
+        let grammarScore = 0;
+        let words = ans.split(/\s+/);
+        let hasCommonErrors = /\b(their|there|they're)\b/gi.test(ans) || // common confusions
+                              /\b(your|you're)\b/gi.test(ans) ||
+                              /\b(its|it's)\b/gi.test(ans);
+        
+        let spellingIssues = 0;
+        if(/\b[a-z]{15,}\b/i.test(ans) && !hasCommonErrors) grammarScore = 2; // Long words without common errors = good
+        else if(hasCommonErrors) grammarScore = 0;
+        else grammarScore = 1;
+        
+        score += grammarScore;
+        
+        // Relevance check - using comprehensive keyword list
+        let answerLower = ans.toLowerCase();
+        let foundKeywords = scoringKeywords.filter(keyword => answerLower.includes(keyword)).length;
+        
+        if(foundKeywords > 0){
+            score += 2;
+            if(foundKeywords >= 3 && ans.length > 60){
+                score += 1;
+                fb = "Excellent! Fluent, clear answer with good relevance to the question.";
+            } else if(foundKeywords >= 2){
+                fb = "Good answer with clear relevance and decent flow.";
+            } else {
+                fb = "Answer is relevant but could be more detailed.";
+            }
+        } else {
+            fb = "Answer needs to be more relevant to the question asked.";
+        }
+        
+        if(score > 10) score = 10;
+    }
+    
+    userAnswers.push(ans);
+    userScores.push(score);
+    userTips.push(fb);
+    
+    // Show feedback and score immediately
+    document.getElementById("feedbackBox").innerHTML = `
+        <div style="background:#013b8b;padding:20px;border-radius:15px;margin:15px 0;">
+            <p><b>Score:</b> <span style="color:#39b6ff;font-size:20px;">${score}/10</span></p>
+            <p><b>Feedback:</b> ${fb}</p>
+        </div>
+    `;
+    
+    // Send answer to server for persistence (if user logged in)
+    try{
+        const questionSent = aiQuestions[currentQ] || document.getElementById('questionBox').innerText;
+        fetch('/submit_answer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: questionSent, answer: ans })
+        }).then(r=>{
+            if(r.status === 401){
+                // Not logged in on server side - redirect to login
+                window.location.href = '/login';
+            }
+            return r.json().catch(()=>null);
+        }).then(data=>{
+            if(data && data.score){
+                // Optionally update server-provided score/feedback in UI or console
+                console.log('Saved on server, server-score:', data.score);
+            }
+        }).catch(e=>{ console.warn('Could not save answer to server:', e); });
+    }catch(e){ console.warn(e); }
+
+    document.getElementById("nextBtn").style.display = "block";
+    document.getElementById("answerInput").disabled = true;
+}
+
+function displayScore(){
+    const box=document.getElementById("scoreContent"); 
+    box.innerHTML="";
+    
+    if(userScores.length === 0){
+        // Try fetching saved scores from server for logged-in users
+        fetch('/get_scores').then(r=>{
+            if(r.status === 401){
+                // not logged in, show empty message
+                box.innerHTML = "<p style='text-align:center;color:#cfe9ff;font-size:16px;'>No interview completed yet. Start a new interview to see results.</p>";
+                document.getElementById("scoreDate").innerText = "-";
+                document.getElementById("totalScore").innerText = "-";
+                return [];
+            }
+            return r.json();
+        }).then(results=>{
+            if(!results || results.length === 0){
+                if(!results) return;
+                box.innerHTML = "<p style='text-align:center;color:#cfe9ff;font-size:16px;'>No interview completed yet. Start a new interview to see results.</p>";
+                document.getElementById("scoreDate").innerText = "-";
+                document.getElementById("totalScore").innerText = "-";
+                return;
+            }
+            // Populate local arrays from server results
+            aiQuestions = results.map(r=>r.question);
+            userAnswers = results.map(r=>r.answer);
+            userScores = results.map(r=>r.score);
+            interviewDate = new Date().toLocaleDateString();
+            // Re-run display to render the populated data
+            displayScore();
+        }).catch(err=>{
+            console.warn('Error fetching scores:', err);
+            box.innerHTML = "<p style='text-align:center;color:#cfe9ff;font-size:16px;'>No interview completed yet. Start a new interview to see results.</p>";
+            document.getElementById("scoreDate").innerText = "-";
+            document.getElementById("totalScore").innerText = "-";
+        });
+        return;
+    } else {
+        let totalScore = userScores.reduce((a,b) => a+b, 0);
+        
+        // Set date and total score in header
+        document.getElementById("scoreDate").innerText = interviewDate;
+        document.getElementById("totalScore").innerText = `${totalScore}/${userScores.length * 10}`;
+        
+        // Show each question without feedback in this page
+        for(let i=0;i<userAnswers.length;i++){
+            box.innerHTML+=`<div class='score-box'>
+            <b>Question ${i+1}:</b> ${aiQuestions[i]}<br>
+            <b>Your Answer:</b> ${userAnswers[i]}<br>
+            <b>Score:</b> <span style="color:#39b6ff;font-size:18px;">${userScores[i]}/10</span></div>`;
+        }
+    }
+}
+
+// Resume upload dynamic questions - KEYWORD BASED GENERATION
+function uploadResume(){
+    const file=document.getElementById("resumeFile").files[0];
+    if(!file){ alert("Select a resume file."); return; }
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const resumeContent = e.target.result.toLowerCase();
+        let generatedQuestions = [];
+        interviewDate = new Date().toLocaleDateString();
+        currentInterviewType = "resume";
+        
+        // KEYWORD LISTS - organized by category
+        let experienceKeywords = ["experience","project","projects","worked","working","developed","designed","implemented","handled","managed","led","team","teamwork","leadership","responsibility","role","contribution","achievement","accomplishment","success","challenge","problem","solution","issue","resolved","improved","optimized","enhanced","innovation","idea","initiative"];
+        
+        let skillsKeywords = ["skills","technical skills","soft skills","core skills","primary skills","secondary skills","tools","technologies","framework","language","programming","coding","development","testing","debugging","deployment","maintenance","automation","database","api","integration","cloud","security","performance","python","java","javascript","react","angular","nodejs","sql","html","css","aws","docker","kubernetes","git"];
+        
+        let learningKeywords = ["internship","training","certification","course","learning","learning experience","self learning","online course","workshop","seminar","knowledge","practice","hands on","real time","industry exposure"];
+        
+        let softSkillsKeywords = ["communication","presentation","documentation","client","customer","stakeholder","requirement","analysis","understanding","coordination","collaboration","cross functional","interaction","feedback","lead","mentor","guide","support","decision","decision making","ownership","accountability","proactive","self motivated","independent","reliability"];
+        
+        let processKeywords = ["timeline","deadline","time management","planning","execution","delivery","quality","accuracy","attention to detail","best practices","standards","process","workflow","methodology","agile","scrum"];
+        
+        // EXTRACT FOUND KEYWORDS
+        let foundExperience = experienceKeywords.filter(k => resumeContent.includes(k));
+        let foundSkills = skillsKeywords.filter(k => resumeContent.includes(k));
+        let foundLearning = learningKeywords.filter(k => resumeContent.includes(k));
+        let foundSoftSkills = softSkillsKeywords.filter(k => resumeContent.includes(k));
+        let foundProcess = processKeywords.filter(k => resumeContent.includes(k));
+        
+        // GENERATE TARGETED QUESTIONS BASED ON KEYWORDS FOUND
+        
+        // Experience questions
+        if(foundExperience.includes("project") || foundExperience.includes("projects")){
+            generatedQuestions.push("Describe the projects you have worked on and your specific contributions to each.");
+        }
+        if(foundExperience.includes("led") || foundExperience.includes("leadership")){
+            generatedQuestions.push("Tell us about a time you led a project or team. What was your approach?");
+        }
+        if(foundExperience.includes("challenge") || foundExperience.includes("problem")){
+            generatedQuestions.push("Describe a challenging situation you faced in your work and how you resolved it.");
+        }
+        if(foundExperience.includes("improved") || foundExperience.includes("optimized")){
+            generatedQuestions.push("What improvements or optimizations did you implement in your projects?");
+        }
+        if(foundExperience.includes("role") || foundExperience.includes("responsibility")){
+            generatedQuestions.push("Explain your role and key responsibilities in your previous positions.");
+        }
+        
+        // Skills questions - Extract specific technologies mentioned
+        if(foundSkills.length > 0){
+            let specificSkills = foundSkills.filter(s => ["python","java","javascript","react","angular","nodejs","sql","html","css","aws","docker","kubernetes","git"].includes(s)).slice(0,2);
+            if(specificSkills.length > 0){
+                specificSkills.forEach(skill => {
+                    generatedQuestions.push(`What is your experience with ${skill}? Please share a practical example.`);
+                });
+            } else {
+                let skillSample = foundSkills.slice(0,2).join(" and ");
+                generatedQuestions.push(`Tell us about your proficiency in ${skillSample} and how you've applied them.`);
+            }
+        }
+        if(foundSkills.includes("programming") || foundSkills.includes("coding") || foundSkills.includes("development")){
+            generatedQuestions.push("What programming languages and development tools are you most proficient with?");
+        }
+        if(foundSkills.includes("database") || foundSkills.includes("sql")){
+            generatedQuestions.push("Explain your experience with databases and SQL. Can you share an example?");
+        }
+        if(foundSkills.includes("cloud") || foundSkills.includes("aws") || foundSkills.includes("docker")){
+            generatedQuestions.push("Tell us about your cloud technologies experience and how you've used them.");
+        }
+        
+        // Learning questions
+        if(foundLearning.includes("internship")){
+            generatedQuestions.push("Tell us about your internship experience and what you learned from it.");
+        }
+        if(foundLearning.includes("certification") || foundLearning.includes("training")){
+            generatedQuestions.push("What certifications or training have you completed and how did they help your career?");
+        }
+        
+        // Soft skills questions
+        if(foundSoftSkills.includes("communication") || foundSoftSkills.includes("presentation")){
+            generatedQuestions.push("How do you communicate complex ideas to stakeholders or team members?");
+        }
+        if(foundSoftSkills.includes("client") || foundSoftSkills.includes("customer")){
+            generatedQuestions.push("Describe your experience handling client or customer requirements and expectations.");
+        }
+        if(foundSoftSkills.includes("collaboration") || foundSoftSkills.includes("cross functional")){
+            generatedQuestions.push("Share an example of how you collaborated across teams to achieve a goal.");
+        }
+        if(foundSoftSkills.includes("leadership") || foundSoftSkills.includes("decision")){
+            generatedQuestions.push("Tell us about a critical decision you made and how it impacted the outcome.");
+        }
+        
+        // Process questions
+        if(foundProcess.includes("agile") || foundProcess.includes("scrum")){
+            generatedQuestions.push("Explain your experience with Agile or Scrum methodologies.");
+        }
+        if(foundProcess.includes("deadline") || foundProcess.includes("time management")){
+            generatedQuestions.push("How do you manage your time when handling multiple projects with tight deadlines?");
+        }
+        if(foundProcess.includes("quality") || foundProcess.includes("best practices")){
+            generatedQuestions.push("What quality standards and best practices do you follow in your work?");
+        }
+        
+        // If no questions generated, use general ones
+        if(generatedQuestions.length === 0){
+            generatedQuestions = [
+                "Tell me about yourself and your professional background.",
+                "What attracted you to apply for this position?",
+                "What are your short-term and long-term career goals?",
+                "How do you handle difficult situations at work?",
+                "What motivates you to excel in your career?"
+            ];
+        }
+        
+        // Ensure exactly 5 questions
+        if(generatedQuestions.length > 5){
+            generatedQuestions = generatedQuestions.slice(0, 5);
+        } else if(generatedQuestions.length < 5){
+            const fillQuestions = [
+                "Tell me about yourself.",
+                "Why are you interested in this role?",
+                "Where do you see yourself in 5 years?",
+                "How do you handle pressure and deadlines?",
+                "What is your greatest strength?",
+                "Describe a project you're proud of.",
+                "How do you stay updated with industry trends?"
+            ];
+            for(let q of fillQuestions){
+                if(generatedQuestions.length < 5 && !generatedQuestions.includes(q)){
+                    generatedQuestions.push(q);
+                }
+            }
+        }
+        
+        questionPool = generatedQuestions;
+        currentQ = 0;
+        userAnswers = [];
+        userScores = [];
+        userTips = [];
+        aiQuestions = [];
+        
+        showPage("randomPage");
+        showQuestion();
+        alert("Resume uploaded! Customized questions generated from your resume keywords.");
+    };
+    reader.readAsText(file);
+}
+
+// Profile actions
+function showTerms(){ showPage("termsPage"); }
+
+// Particle background
+const canvas=document.getElementById("particles");
+const ctx=canvas.getContext("2d"); canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+let particlesArray=[]; const particleCount=120; const maxDistance=150;
+class Particle{
+    constructor(){ this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.size=Math.random()*3+1;
+        this.speedX=(Math.random()-0.5)*0.7; this.speedY=(Math.random()-0.5)*0.7;
+        this.color='rgba(62,185,255,'+Math.random()+')';}
+    update(){ this.x+=this.speedX; this.y+=this.speedY; if(this.x>canvas.width)this.x=0; if(this.x<0)this.x=canvas.width;
+        if(this.y>canvas.height)this.y=0; if(this.y<0)this.y=canvas.height;}
+    draw(){ ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fillStyle=this.color; ctx.fill();}
+}
+function init(){ particlesArray=[]; for(let i=0;i<particleCount;i++)particlesArray.push(new Particle());}
+init();
+function connectParticles(){ for(let a=0;a<particlesArray.length;a++){for(let b=a;b<particlesArray.length;b++){
+const dx=particlesArray[a].x-particlesArray[b].x; const dy=particlesArray[a].y-particlesArray[b].y; const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<maxDistance){ ctx.beginPath(); ctx.strokeStyle='rgba(62,185,255,'+(1-dist/maxDistance)+')'; ctx.lineWidth=1;
+ctx.moveTo(particlesArray[a].x,particlesArray[a].y); ctx.lineTo(particlesArray[b].x,particlesArray[b].y); ctx.stroke(); }}}}
+function animate(){ ctx.clearRect(0,0,canvas.width,canvas.height); particlesArray.forEach(p=>{p.update();p.draw();}); connectParticles(); requestAnimationFrame(animate);}
+animate();
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight; init();});
+</script>
+<!-- Fixed back button for score page (visible only on results) -->
+<button id="scoreBackBtn" onclick="exitFlow()" style="position:fixed;right:20px;bottom:20px;z-index:9999;display:none;padding:12px 18px;font-size:16px;background:#ff6b6b;color:white;border-radius:8px;border:none;box-shadow:0 8px 20px rgba(0,0,0,0.4);cursor:pointer;">← Back to Dashboard</button>
+</body>
+</html>

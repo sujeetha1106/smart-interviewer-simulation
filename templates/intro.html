@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SIS Loading - Ultimate</title>
+<style>
+/* ---- same styles, untouched ---- */
+body {
+    margin:0;
+    padding:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    background: linear-gradient(135deg,#00143a,#00296b);
+    font-family:'Arial',sans-serif;
+    color:white;
+    overflow:hidden;
+}
+/* Canvas for particles network */
+canvas {
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:0;
+}
+.logo {
+    font-size:90px;
+    font-weight:900;
+    color:#6ec4ff;
+    text-shadow:0 0 25px #6ec4ff,0 0 50px #3fb9ff,0 0 70px #6ec4ff;
+    margin-bottom:15px;
+    animation: glow 2.5s ease-in-out infinite alternate, pulse 3s ease-in-out infinite;
+    z-index:1;
+}
+@keyframes glow {
+    0% { text-shadow: 0 0 20px #6ec4ff,0 0 40px #3fb9ff; }
+    50% { text-shadow: 0 0 35px #3fb9ff,0 0 60px #6ec4ff; }
+    100% { text-shadow: 0 0 50px #6ec4ff,0 0 80px #3fb9ff; }
+}
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.tagline {
+    font-size:28px;
+    font-weight:600;
+    opacity:0.95;
+    margin-bottom:50px;
+    animation: bouncefade 2s ease-in-out infinite alternate;
+    color:#cfe9ff;
+    z-index:1;
+}
+@keyframes bouncefade {
+    0% { transform: translateY(0); opacity:0.8; }
+    50% { transform: translateY(-14px); opacity:1; }
+    100% { transform: translateY(0); opacity:0.9; }
+}
+.loader-box {
+    width:500px;
+    height:30px;
+    background:#013064;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow: 0 0 25px rgba(110,196,255,0.5);
+    z-index:1;
+    position:relative;
+}
+.loader-fill {
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg,#3fb9ff,#6ec4ff,#39b6ff,#3fb9ff);
+    border-radius:15px;
+    animation: load 6s ease-in-out forwards;
+    position:relative;
+}
+.loader-fill::before {
+    content:"";
+    display:block;
+    height:100%;
+    width:100%;
+    background: linear-gradient(270deg,#3fb9ff,#6ec4ff,#39b6ff,#3fb9ff);
+    animation: move 2s linear infinite;
+}
+@keyframes load {
+    0% { width:0%; }
+    100% { width:100%; }
+}
+@keyframes move {
+    0% { background-position: 0 0; }
+    100% { background-position: 200% 0; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="logo">SIS</div>
+<div class="tagline">Smart Interviewer Simulation</div>
+
+<div class="loader-box">
+    <div class="loader-fill"></div>
+</div>
+
+<script>
+// redirect after loading
+setTimeout(()=>{ window.location.href="./dashboard.html"; },6500);
+
+/* Particle animation script untouched */
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+let particlesArray = [];
+class Particle{
+    constructor(){
+        this.x = Math.random()*canvas.width;
+        this.y = Math.random()*canvas.height;
+        this.size = Math.random()*3+1;
+        this.speedX = (Math.random()-0.5)*0.7;
+        this.speedY = (Math.random()-0.5)*0.7;
+        this.color = 'rgba(62,185,255,'+Math.random()+')';
+    }
+    update(){
+        this.x+=this.speedX;
+        this.y+=this.speedY;
+        if(this.x>canvas.width) this.x=0;
+        if(this.x<0) this.x=canvas.width;
+        if(this.y>canvas.height) this.y=0;
+        if(this.y<0) this.y=canvas.height;
+    }
+    draw(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+        ctx.fillStyle=this.color;
+        ctx.fill();
+    }
+}
+
+function init(){
+    particlesArray=[];
+    for(let i=0;i<120;i++){ particlesArray.push(new Particle()); }
+}
+init();
+
+function connect(){
+    for(let a=0;a<particlesArray.length;a++){
+        for(let b=a;b<particlesArray.length;b++){
+            const dx = particlesArray[a].x - particlesArray[b].x;
+            const dy = particlesArray[a].y - particlesArray[b].y;
+            const dist = Math.sqrt(dx*dx+dy*dy);
+            if(dist<150){
+                ctx.beginPath();
+                ctx.strokeStyle='rgba(62,185,255,'+(1-dist/150)+')';
+                ctx.lineWidth=1;
+                ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                ctx.stroke();
+            }
+        }
+    }
+}
+
+function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particlesArray.forEach(p=>{
+        p.update();
+        p.draw();
+    });
+    connect();
+    requestAnimationFrame(animate);
+}
+animate();
+
+window.addEventListener("resize",()=>{
+    canvas.width=innerWidth;
+    canvas.height=innerHeight;
+    init();
+});
+</script>
+
+</body>
+</html>

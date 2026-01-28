@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIS Sign Up</title>
+<style>
+body{
+  margin:0; font-family:Arial,sans-serif; height:100vh; display:flex; justify-content:center; align-items:center;
+  overflow:hidden; background:#00143a; color:white;
+}
+canvas#particles{ position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; }
+.orb{ position:absolute; border-radius:50%; filter:blur(50px); z-index:0; }
+.orb1{ width:260px; height:260px; top:15%; left:12%; background:rgba(0,200,255,0.18);}
+.orb2{ width:300px; height:300px; bottom:15%; right:12%; background:rgba(0,140,255,0.18); filter:blur(60px); }
+.auth-box{ background:rgba(178,227,255,0.1); width:360px; padding:35px 30px; border-radius:12px; text-align:center;
+  box-shadow:0 10px 25px rgba(0,180,255,0.35),0 0 30px rgba(0,200,255,0.2); z-index:1; backdrop-filter: blur(10px);
+  border:1px solid rgba(110,196,255,0.3);}
+.auth-box h1{ font-family:Georgia, serif; font-size:42px; margin:5px 0; color:#6ec4ff; text-shadow:1px 1px 0 #012060,2px 2px 0 #012060,3px 3px 6px rgba(0,0,0,0.4);}
+.auth-box p{ font-family:'Times New Roman', Times, serif; font-style:italic; font-size:14px; margin-bottom:20px; color:#cfe9ff; }
+.auth-box div.avatar{ width:80px; height:80px; background:#cdd2d3; border-radius:50%; margin:0 auto 20px; display:flex; align-items:center; justify-content:center; font-size:40px; box-shadow:inset 0 0 10px rgba(0,0,0,0.25);}
+.auth-box input{ width:100%; padding:12px; margin:10px 0; font-size:16px; border-radius:6px; border:1px solid #bbb; background:rgba(255,255,255,0.1); color:white;}
+.auth-box input::placeholder{ color:#cfe9ff; }
+.auth-box button{ width:100%; padding:14px; font-size:18px; background:#39b6ff; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow:0 5px 10px rgba(0,0,0,0.3);}
+.auth-box button:hover{ background:#6ec4ff; }
+.auth-box .toggle{ margin-top:12px; font-size:14px; color:#39b6ff; cursor:pointer; text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="auth-box">
+  <h1>SIS</h1>
+  <p>Create your account</p>
+  <div class="avatar">📝</div>
+  <form method="POST" action="/signup">
+    <input type="email" name="email" placeholder="Email ID" required>
+    <input type="text" name="username" placeholder="Username" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit">Sign Up</button>
+  </form>
+  <div class="toggle" onclick="goLogin()">Already have account? Login</div>
+</div>
+
+<script>
+function goLogin(){ window.location.href="login.html"; }
+
+/* --- Particles Background --- */
+const canvas=document.getElementById('particles');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+let particlesArray=[]; const particleCount=120; const maxDistance=150;
+class Particle{ constructor(){ this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.size=Math.random()*3+1; this.speedX=(Math.random()-0.5)*0.7; this.speedY=(Math.random()-0.5)*0.7; this.color='rgba(62,185,255,'+Math.random()+')';}
+update(){ this.x+=this.speedX; this.y+=this.speedY; if(this.x>canvas.width)this.x=0;if(this.x<0)this.x=canvas.width;if(this.y>canvas.height)this.y=0;if(this.y<0)this.y=canvas.height;}
+draw(){ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fillStyle=this.color; ctx.fill();}}
+function init(){particlesArray=[]; for(let i=0;i<particleCount;i++) particlesArray.push(new Particle());}
+init();
+function connectParticles(){for(let a=0;a<particlesArray.length;a++){for(let b=a;b<particlesArray.length;b++){const dx=particlesArray[a].x-particlesArray[b].x; const dy=particlesArray[a].y-particlesArray[b].y; const dist=Math.sqrt(dx*dx+dy*dy); if(dist<maxDistance){ctx.beginPath(); ctx.strokeStyle='rgba(62,185,255,'+(1-dist/maxDistance)+')'; ctx.lineWidth=1; ctx.moveTo(particlesArray[a].x,particlesArray[a].y); ctx.lineTo(particlesArray[b].x,particlesArray[b].y); ctx.stroke();}}}}
+function animate(){ctx.clearRect(0,0,canvas.width,canvas.height); particlesArray.forEach(p=>{p.update(); p.draw();}); connectParticles(); requestAnimationFrame(animate);}
+animate(); window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; init(); });
+</script>
+</body>
+</html>
